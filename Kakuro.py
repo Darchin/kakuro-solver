@@ -1,5 +1,6 @@
 import numpy as np
-
+CRED = '\033[91m'
+CEND = '\033[0m'
 class Kakuro:
     class Tile:
         def __init__(self, row, col):
@@ -31,30 +32,28 @@ class Kakuro:
         h_groups = []
         for h_condensed in h_list:
             h = [int(x) for x in h_condensed.split(sep=' ')]
-            board_display[h[0]][h[1]-1] = "/" + str(h[3])
+            board_display[h[0]][h[1]-1] = CRED + '/' + str(h[3]) + CEND
             h_tiles = []
             h_rule = h[3]
             for i in range(h[1],h[2]+1):
                 board_display[h[0]][i] = '\u002D'
                 h_tiles.append(Kakuro.Tile(h[0],i))
             h_groups.append(Kakuro.Group(h_rule, h_tiles))
-
         # Create vertical groups
         v_list = v_str.split(sep=',')
         v_groups = []
         for v_condensed in v_list:
             v = [int(x) for x in v_condensed.split(sep=' ')]
-            if board_display[v[1]][v[0]] == '\u25A0':
-                board_display[v[1]-1][v[0]] = str(v[3]) + "/"
+            if board_display[v[1]-1][v[0]] == '\u25A0':
+                board_display[v[1]-1][v[0]] = CRED + str(v[3]) + '/' + CEND
             else:
-                board_display[v[1]-1][v[0]] = str(v[3]) + board_display[v[1]][v[0]]
+                board_display[v[1]-1][v[0]] = CRED + str(v[3]) + board_display[v[1]-1][v[0]][len(CRED):]
             v_tiles = []
             v_rule = v[3]
             for i in range(v[1],v[2]+1):
                 v_tiles.append(Kakuro.Tile(i,v[0]))
                 board_display[i][v[0]] = '\u002D'
             v_groups.append(Kakuro.Group(v_rule, v_tiles))
-        
         return Kakuro(h_groups, v_groups, board_display, board_size)
     
     def setTile(self, tile, value):
@@ -77,7 +76,6 @@ def main():
     N = 8
     easy_kakuro_1 = "1 2 4 19,1 6 7 10,2 1 7 39,3 1 2 15,3 4 5 10,4 2 3 16,4 5 6 4,5 3 4 9,5 6 7 12,6 1 7 35,7 1 2 16,7 4 6 7;1 2 3 16,1 6 7 14,2 1 4 30,2 6 7 16,3 1 2 4,3 4 6 23,4 1 3 24,4 5 7 6,5 2 4 9,5 6 7 4,6 1 2 4,6 4 7 10,7 1 2 16,7 5 6 16"
     game_board = Kakuro.createBoardFromString(N, easy_kakuro_1)
-    # game_board.printGroups()
     game_board.printBoard()
 
 main()
