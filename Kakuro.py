@@ -67,7 +67,7 @@ class Kakuro:
             self.ratio = min((9-rule_over_tile_count), rule_over_tile_count-1)
         def generatePartitions(self):
             self.partitions = Partitioner.getOrderedPartitions(self.rule, len(self.tiles))
-            self.partition_mask = Partitioner.generatePartitionMask(self.partitions)
+            # self.partition_mask = Partitioner.generatePartitionMask(self.partitions)
         def generateConsistentPartitions(self, assigned_tiles):
             tile_count = len(self.tiles) - len(assigned_tiles)
             rule_remainder = self.rule
@@ -142,8 +142,10 @@ class Kakuro:
         for g_list in self.groups:
             for g in g_list:
                 if g in group_assignments:
-                    g.calculateRatio(assignments, True)
-                else: g.calculateRatio(assignments)
+                    assigned = True
+                else: 
+                    assigned = False
+                g.calculateRatio(assignments, assigned)
     def selectMostContrainedGroup(self, group_assignments) -> Group:
         unassigned_groups = self.groups.copy()
         for i in range(len(unassigned_groups)): # iterating over horizontal and vertical groups
@@ -186,22 +188,23 @@ class Kakuro:
             return True
         else:
             return False
-    def checkConsistency(self, groups, assignments, last_assignment):
-        merged_assignments = assignments | last_assignment
-        for g in groups: # For every perpendicular group
-            assigned_tiles = {}
-            for tile in g.tiles:
-                if tile in merged_assignments:
-                    assigned_tiles[tile] = merged_assignments[tile]
-            g.partitions = g.generateConsistentPartitions(assigned_tiles)
-            if len(g.partitions) == 0:
-                return False
+    def checkConsistency(self, assignments, last_assignment):
+        for var1, val1 in assignments.items():
+            for var2, val2 in last_assignment.items():
+                if self.checkIfTilesShareGroup(var1, var2) and val1 == val2:
+                    return False
         return True
-
+    def checkIfTilesShareGroup(self, tile1, tile2):
+        t1_groups = self.tile_map[tile1]
+        t2_groups = self.tile_map[tile2]
+        if t1_groups[0] == t2_groups[0] or t1_groups[1] == t2_groups[1]:
+            return True
+        else:
+            return False
     def solve(self, assignments = {}, group_assignments = {}):
         if Kakuro.checkAssignment(assignments):
             return assignments
-        print(assignments)
+        # print(assignments)
         # print(group_assignments)
         # Choose a variable (group in this case) according to ratios
         self.calculateRatios(assignments, group_assignments)
@@ -210,9 +213,9 @@ class Kakuro:
         group.generatePartitions()
 
         # Find colliding groups
-        perp_groups = []
-        for tile in group.tiles:
-            perp_groups.append(self.getPerpendicularGroup(group, tile))
+        # perp_groups = []
+        # for tile in group.tiles:
+        #     perp_groups.append(self.getPerpendicularGroup(group, tile))
 
         # Iterate over each partition, adding it to assignments and generating the restricted partition list for the affected groups;
         # Then check whether a group's partition list becomes empty. If so, remove assignment.
@@ -224,12 +227,12 @@ class Kakuro:
             for num in p:
                 new_assignment[group.tiles[j]] = num
                 j += 1
-            if not self.checkConsistency(perp_groups, assignments, new_assignment):
+            if not self.checkConsistency(assignments, new_assignment):
                 continue
             assignments.update(new_assignment)
             group_assignments.update(new_group_assignment)
             # Utils.printBoard(next_board.updateBoard(assignments, group_key))
-            result = self.solve(assignments, group_assignments)
+            result = self.solve(assignments.copy(), group_assignments.copy())
             if result != -1:
                 return result
 
