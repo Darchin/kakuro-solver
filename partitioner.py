@@ -14,12 +14,14 @@ class Partitioner:
         return g_list
 
     def remove_duplicates(list):
+        partitions = list.copy()
         i = 0
-        while i < len(list):
-            if len(list[i]) != len(set(list[i])):
-                del list[i]
-            i += 1
-        return list
+        while i < len(partitions):
+            if len(partitions[i]) != len(set(partitions[i])):
+                partitions.pop(i)
+            else:
+                i += 1
+        return partitions
     def getOrderedPartitions(N, k):
         return Partitioner.remove_duplicates(Partitioner.partition(N, k))
     def flatten(list):
@@ -31,4 +33,4 @@ class Partitioner:
             if i in flattened_partition_list:
                 partition_mask[i-1] = True
         return partition_mask
-# print(Partitioner.getOrderedPartitions(16,2))
+print(Partitioner.getOrderedPartitions(30,4))
