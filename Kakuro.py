@@ -31,28 +31,41 @@ class Utils:
             offset = shared_tile.row - perp_group.tiles[0].row
         return offset
 class Kakuro:
+    VARIABLE_COUNT = 0
     class Tile:
-        def __init__(self, row, col):
+        def __init__(self, row, col, val = 0):
             self.row = row
             self.col = col
+            self.val = val
         def __str__(self):
             return f'[{self.row},{self.col}]'
         def __repr__(self):
             return self.__str__()
     class Group:
         def __init__(self, rule, tiles, identifier, orientation):
+            self.unassigned_tile_count = len(tiles)
             self.id = identifier
             self.orientation = orientation
             self.rule = rule
+            self.rule_remainder = rule
             self.tiles = tiles.copy()
             self.partitions = []
             self.partition_mask = []
             self.ratio = 0
         def calculateRatio(self, assigned = False):
+            # Do not recalculate ratio for current assignments
             if assigned:
-                self.ratio = 999
-            else: 
-                self.ratio = min(9-(self.rule/len(self.tiles)),(self.rule/len(self.tiles))-1)
+                return
+            updated_rule = self.rule
+            updated_tile_count = self.unassigned_tile_count
+            for tile in self.tiles:
+                if tile.val != 0:
+                    updated_rule -= tile.val
+                    updated_tile_count -= 1
+            self.rule_remainder = updated_rule
+            self.unassigned_tile_count = updated_tile_count
+            rule_over_tile_count = self.rule_remainder/self.unassigned_tile_count
+            self.ratio = min((9-rule_over_tile_count), rule_over_tile_count-1)
         def generatePartitions(self):
             self.partitions = Partitioner.getOrderedPartitions(self.rule, len(self.tiles))
             self.partition_mask = Partitioner.generatePartitionMask(self.partitions)
@@ -71,6 +84,7 @@ class Kakuro:
     def __init__(self, groups, tile_map):
         self.groups = groups
         self.tile_map = tile_map
+        Kakuro.VARIABLE_COUNT += sum([len(g.tiles) for g in groups[0]])
     def createBoardFromString(board_size, board_str): 
         board_display_matrix = [[Utils.BLOCK_STYLE]*board_size for _ in range(board_size)]
         h_groups_string, v_groups_string = board_str.split(sep=';')
@@ -117,9 +131,14 @@ class Kakuro:
                 if f'{g.orientation}{g.id}' in assignments:
                     g.calculateRatio(True)
                 else: g.calculateRatio()
-    def selectGroup(self) -> Group:
-        min_h_group = min(self.groups[0], key=attrgetter('ratio'))
-        min_v_group = min(self.groups[1], key=attrgetter('ratio'))
+    def selectMostContrainedGroup(self, group_assignments) -> Group:
+        unassigned_groups = self.groups.copy()
+        for G in unassigned_groups: # iterating over horizontal and vertical groups
+            for g in G:
+                if g in group_assignments:
+                    unassigned_groups.remove(g)
+        min_h_group = min(unassigned_groups[0], key=attrgetter('ratio'))
+        min_v_group = min(unassigned_groups[1], key=attrgetter('ratio'))
         return min(min_h_group,min_v_group, key=attrgetter('ratio'))
     def findGroup(self, group_pair) -> Group:
         group_id = int(group_pair[1:])
@@ -147,24 +166,20 @@ class Kakuro:
             updated_board[row][col] = Utils.COLOR_LAST_ASSIGNMENT + str(num) + Utils.END_COLOR
             i += 1
         return updated_board
-    def getCorrespondingGroup(self, other_group):
-        if other_group.orientation == 'H':
-            index = 0
+    def checkAssignment(assignments) -> bool:
+        if len(assignments) == Kakuro.VARIABLE_COUNT:
+            return True
         else:
-            index = 1
-        return self.groups[index][other_group.id]
-    def solve(self, assignments = {}):
-        print(assignments)
-        L = len(assignments)
-        if L == len(self.groups[0]) + len(self.groups[1]):
+            return False
+    def solve(self, assignments = {}, group_assignments = {}):
+        if Kakuro.checkAssignment(assignments):
             return assignments
-        # Create a new, separate copy of the given game board
-        # dummy_board = Kakuro(self.groups, self.tile_map)
 
         # Choose a variable (group in this case) according to ratios
         self.calculateRatios(assignments)
-        group = self.selectGroup()
-        group_key = f'{group.orientation}{group.id}'
+        group = self.selectMostContrainedGroup(group_assignments)
+        # group_key = f'{group.orientation}{group.id}'
+        
         # Generate chosen group's partitions
         group.generatePartitions()
 
@@ -201,7 +216,6 @@ class Kakuro:
                 return result
             result = next_board.solve(assignments)
             return result
-
     def getPerpendicularGroup(self, original_group, shared_tile):
         group_pair = self.tile_map[shared_tile.row, shared_tile.col]
         if original_group.orientation == 'H':
@@ -225,12 +239,13 @@ def main():
     easy_kakuro_1 = "1 2 4 19,1 6 7 10,2 1 7 39,3 1 2 15,3 4 5 10,4 2 3 16,4 5 6 4,5 3 4 9,5 6 7 12,6 1 7 35,7 1 2 16,7 4 6 7;"+\
     "1 2 3 16,1 6 7 14,2 1 4 30,2 6 7 16,3 1 2 4,3 4 6 23,4 1 3 24,4 5 7 6,5 2 4 9,5 6 7 4,6 1 2 4,6 4 7 10,7 1 2 16,7 5 6 16"
     game_board, board_display_matrix = Kakuro.createBoardFromString(N, easy_kakuro_1)
-    global INPUT_BOARD_MATRIX
-    INPUT_BOARD_MATRIX = board_display_matrix
+    print(game_board.VARIABLE_COUNT)
+    # global INPUT_BOARD_MATRIX
+    # INPUT_BOARD_MATRIX = board_display_matrix
     # print(game_board.selectGroup())
     # Utils.printBoard(board_display_matrix)
     # game_board.printGroups()
-    game_board.solve()
+    # game_board.solve()
 
 if __name__ == '__main__':
     main()
