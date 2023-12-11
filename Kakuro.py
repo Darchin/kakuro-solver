@@ -1,4 +1,5 @@
 from partitioner import Partitioner
+from operator import attrgetter
 import sample_kakuro_puzzles
 import sys
 import math
@@ -88,7 +89,6 @@ class Kakuro:
                 else: unassigned_tiles.append(tile)
 
             partitions = Partitioner.getOrderedPartitions(reduced_rule, reduced_tile_count)
-            # partitions = Utils.partition_list[reduced_tile_count][reduced_rule]
             
             for p in partitions.copy():
                 if len(set(p)|used_digits) < len(p)+len(used_digits):
@@ -177,9 +177,9 @@ class Kakuro:
         if Kakuro.checkAssignmentCompleteness(assignments):
             return assignments
         
-        # Choose a variable (group in this case) according to ratios
+        # Choose variables (or a group in simple terms) according to group ratios
         selected_group = self.selectMostContrainedGroup(self.calculateRatios(assignments))
-        
+        # selected_group = self.groups[0][iter]
         # Generate chosen group's partitions
         domain, to_be_assigned_tiles = selected_group.generateDomain(assignments)
 
@@ -192,9 +192,8 @@ class Kakuro:
                 new_assignment[tile] = partition[j]
                 j += 1
 
-            # time.sleep(0.4)
-            # os.system("cls")
-            # Utils.printBoard(Kakuro.updatedBoard(assignments, new_assignment))
+            # time.sleep(1)
+            # Utils.printBoard(Utils.updateBoard(assignments, new_assignment))
             # print(f'Previous assignments -> {assignments}')
             # print(f'New assignment -> {new_assignment}')
             # print("--------------------------------------------------------")
