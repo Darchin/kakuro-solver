@@ -7,7 +7,6 @@ import time
 import os
 from copy import deepcopy
 
-INPUT_BOARD_MATRIX = []
 class Utils:
     # DEFAULT DISPLAY SETTINGS
     COLORS = {'RED':'\033[91m','EMERALD':'\033[92m','YELLOW':'\033[93m','BLUE1':'\033[94m','PINK':'\033[95m','BLUE2':'\033[96m','WHITE':'\033[97m'}
@@ -18,7 +17,6 @@ class Utils:
     COLOR_SEP = COLORS['WHITE']
     END_COLOR = '\033[0m'
     EMPTY_TILE = '\u002D'
-    # PARTITION LIST
     def set_display_settings(block_style, block_thickness = 3, h_color = COLOR_H, v_color = COLOR_V, sep_color = COLOR_SEP):
         if block_style == 'highlight':
             BLOCK_STYLE = '\033[107m'+ ' '*block_thickness +'\033[0m'
@@ -28,7 +26,7 @@ class Utils:
         COLOR_V = Utils.COLORS[v_color]
         COLOR_SEP = Utils.COLORS[sep_color]
     def updateBoard(assignments, new_assignment = {}, highlight_latest_assignment = True):
-        updated_board = deepcopy(INPUT_BOARD_MATRIX)
+        updated_board = deepcopy(Kakuro.STARTING_BOARD)
         for tile, val in assignments.items():
             row = tile.row
             col = tile.col
@@ -44,6 +42,7 @@ class Utils:
             print('\t'.join(map(str, i)))
 class Kakuro:
     VARIABLE_COUNT = 0
+    STARTING_BOARD = []
     class Tile:
         def __init__(self, row, col):
             self.row = row
@@ -57,9 +56,7 @@ class Kakuro:
                 if (row == tile.row) and (col == tile.col):
                     return tile
     class Group:
-        def __init__(self, rule, tiles, identifier, orientation):
-            self.id = identifier
-            self.orientation = orientation
+        def __init__(self, rule, tiles):
             self.rule = rule
             self.tiles = tiles
             self.ratio = 0
@@ -127,7 +124,7 @@ class Kakuro:
             for i in range(h[1],h[2]+1):
                 board_display_matrix[h[0]][i] = Utils.EMPTY_TILE
                 h_tiles.append(Kakuro.Tile(h[0],i))
-            h_groups.append(Kakuro.Group(h_rule, h_tiles, len(h_groups), 'H'))
+            h_groups.append(Kakuro.Group(h_rule, h_tiles))
             for h in h_tiles:
                 tile_map[h] = [h_groups[-1]]
             all_tiles = all_tiles + h_tiles
@@ -146,7 +143,7 @@ class Kakuro:
             for i in range(v[1],v[2]+1):
                 v_tiles.append(Kakuro.Tile.getTile(i, v[0], all_tiles))
                 board_display_matrix[i][v[0]] = Utils.EMPTY_TILE
-            v_groups.append(Kakuro.Group(v_rule, v_tiles, len(v_groups), 'V'))
+            v_groups.append(Kakuro.Group(v_rule, v_tiles))
             for v in v_tiles:
                 tile_map[v] = tile_map[v] + [v_groups[-1]]
             groups = [h_groups]
@@ -221,9 +218,8 @@ def main():
         return
 
     game_board, board_display_matrix = Kakuro.createBoardFromString(selected_puzzle[0], selected_puzzle[1])
-    
-    global INPUT_BOARD_MATRIX
-    INPUT_BOARD_MATRIX = board_display_matrix
+    Kakuro.STARTING_BOARD = board_display_matrix
+
     print("\nPuzzle to solve:")
     Utils.printBoard(board_display_matrix)
     print("\n\nSolving...\n")
