@@ -1,6 +1,5 @@
 from partitioner import Partitioner
-import kakuro_puzzles
-from operator import attrgetter
+import sample_kakuro_puzzles
 import sys
 import math
 import time
@@ -212,7 +211,7 @@ class Kakuro:
 
 def main():
     try:
-        selected_puzzle = kakuro_puzzles.puzzles[sys.argv[1], int(sys.argv[2])]
+        selected_puzzle = sample_kakuro_puzzles.puzzles[sys.argv[1], int(sys.argv[2])]
     except:
         print("Puzzle not found.")
         return

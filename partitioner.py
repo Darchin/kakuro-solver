@@ -16,7 +16,6 @@ class Partitioner:
             g_list = g_list + Partitioner.partition(r, k-1, list + [i])
         
         return g_list
-
     def remove_duplicates(list):
         partitions = list.copy()
         i = 0
@@ -30,11 +29,5 @@ class Partitioner:
         return Partitioner.remove_duplicates(Partitioner.partition(N, k))
     def flatten(list):
         return [item for sublist in list for item in sublist]
-    def generatePartitionMask(partition_list):
-        partition_mask = [False] * 9
-        flattened_partition_list = Partitioner.flatten(partition_list)
-        for i in range(1,10):
-            if i in flattened_partition_list:
-                partition_mask[i-1] = True
-        return partition_mask
+
 # print(Partitioner.getOrderedPartitions(17,2))
