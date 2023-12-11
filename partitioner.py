@@ -2,9 +2,12 @@ class Partitioner:
     def partition(N, k, list = []):
         g_list = []
 
+        if k == 0:
+            return g_list
         if k == 1: 
-            if N < 1: return g_list
-            return [g_list + [*list, N]]
+            if N <= 0: return g_list
+            if N <= 9: return [[*list, N]]
+            return g_list
         
         for i in range(1,10): # 'i' is from 1 to 9
             r = N - i
@@ -34,4 +37,4 @@ class Partitioner:
             if i in flattened_partition_list:
                 partition_mask[i-1] = True
         return partition_mask
-# print(Partitioner.getOrderedPartitions(4,0))
+# print(Partitioner.getOrderedPartitions(17,2))
