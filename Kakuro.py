@@ -47,6 +47,8 @@ class Kakuro:
         def __init__(self, row, col):
             self.row = row
             self.col = col
+            self.hgroup = None
+            self.vgroup = None
         def __str__(self):
             return f'[{self.row},{self.col}]'
         def __repr__(self):
@@ -103,14 +105,12 @@ class Kakuro:
             return string
         def __repr__(self):
             return self.__str__()
-    def __init__(self, groups, tile_map):
+    def __init__(self, groups):
         self.groups = groups
-        self.tile_map = tile_map
         Kakuro.VARIABLE_COUNT += sum([len(g.tiles) for g in groups[0]])
     def createBoardFromString(board_size, board_str): 
         board_display_matrix = [[Utils.BLOCK_STYLE]*board_size for _ in range(board_size)]
         h_groups_string, v_groups_string = board_str.split(sep=';')
-        tile_map = {}
         all_tiles = []
 
         # Create horizontal groups
@@ -125,8 +125,8 @@ class Kakuro:
                 board_display_matrix[h[0]][i] = Utils.EMPTY_TILE
                 h_tiles.append(Kakuro.Tile(h[0],i))
             h_groups.append(Kakuro.Group(h_rule, h_tiles))
-            for h in h_tiles:
-                tile_map[h] = [h_groups[-1]]
+            for tile in h_tiles:
+                tile.hgroup = h_groups[-1]
             all_tiles = all_tiles + h_tiles
 
         # Create vertical groups
@@ -144,11 +144,11 @@ class Kakuro:
                 v_tiles.append(Kakuro.Tile.getTile(i, v[0], all_tiles))
                 board_display_matrix[i][v[0]] = Utils.EMPTY_TILE
             v_groups.append(Kakuro.Group(v_rule, v_tiles))
-            for v in v_tiles:
-                tile_map[v] = tile_map[v] + [v_groups[-1]]
+            for tile in v_tiles:
+               tile.vgroup = v_groups[-1]
             groups = [h_groups]
             groups.append(v_groups)
-        return Kakuro(groups, tile_map), board_display_matrix
+        return Kakuro(groups), board_display_matrix
     def calculateRatios(self, assignments):
         unassigned_groups = []
         for g_list in self.groups:
@@ -166,7 +166,7 @@ class Kakuro:
             return False
     def checkCurrentConsistency(self, assignments, last_assignment):
         for tile, val in last_assignment.items():
-            related_groups = self.tile_map[tile]
+            related_groups = [tile.hgroup] + [tile.vgroup]
             for group in related_groups:
                 for group_tile in group.tiles:
                     if group_tile in assignments:
