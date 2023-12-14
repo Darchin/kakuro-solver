@@ -1,5 +1,5 @@
 from partitioner import Partitioner
-from operator import attrgetter
+import operator
 import sample_kakuro_puzzles
 import sys
 import math
@@ -49,6 +49,11 @@ class Kakuro:
             self.col = col
             self.hgroup = None
             self.vgroup = None
+        def getGroup(self, orientation):
+            if orientation == 0:
+                return self.hgroup
+            else:
+                return self.vgroup
         def __str__(self):
             return f'[{self.row},{self.col}]'
         def __repr__(self):
@@ -62,6 +67,25 @@ class Kakuro:
             self.rule = rule
             self.tiles = tiles
             self.ratio = 0
+        def preCalculate(self, assignments):
+            updated_rule = self.rule
+            unassigned_tile_count = len(self.tiles)
+            assigned_tile_count = 0
+            for tile in self.tiles:
+                if tile in assignments:
+                    updated_rule -= assignments[tile]
+                    assigned_tile_count += 1
+            unassigned_tile_count -= assigned_tile_count
+            return (unassigned_tile_count, assigned_tile_count, updated_rule)
+        def calculateUnorderedRatio(self, new_assignment_val, unassigned_tile_count, assigned_tile_count, updated_rule):
+            current_rule = updated_rule - new_assignment_val
+            utc_new = unassigned_tile_count - 1
+            atc_new = assigned_tile_count + 1
+            if utc_new == 0:
+                return 0, 0
+            else:
+                rule_over_tile_count = current_rule/utc_new
+                return (9-atc_new/9) * min(9-rule_over_tile_count, rule_over_tile_count-1), atc_new
         def calculateRatio(self, assignments):
             updated_rule = self.rule
             updated_tile_count = len(self.tiles)
@@ -98,6 +122,35 @@ class Kakuro:
                 single_val_domain = [assignments[tile] for tile in self.tiles]
                 partitions = [single_val_domain]
             return partitions, unassigned_tiles
+        def getUnassignedTiles(self, assignments):
+            unassigned_tiles = []
+            for tile in self.tiles:
+                if tile in assignments:
+                    unassigned_tiles.append(tile)
+            return unassigned_tiles
+        def createOrderedDomain(self, unordered_partitions, unassigned_tiles, assignments):
+            # determine orientation of affected (perpendicular) groups. '1' is vertical.
+            if self.tiles[0].row - self.tiles[1].row == 0:
+                orientation = 1
+            else:
+                orientation = 0
+
+            scored_partitions = []
+
+            affected_groups = [t.getGroup(orientation) for t in unassigned_tiles]
+            affected_groups_params = []
+            for g in affected_groups:
+                params = g.preCalculate(assignments)
+                affected_groups_params.append(params)
+
+            for partition in unordered_partitions:
+                score = 0
+                for i in range(len(partition)):
+                    ratio, unassigned_tile_count = affected_groups[i].calculateUnorderedRatio(partition[i], affected_groups_params[i][0], affected_groups_params[i][1], affected_groups_params[i][2])
+                    score += ratio*math.factorial(unassigned_tile_count)
+                scored_partitions.append(tuple([partition,score]))
+            scored_partitions.sort(key=operator.itemgetter(1), reverse=True)
+            return [x[0] for x in scored_partitions]
         def __str__(self):
             string = f'Group ID: {self.id}-{self.orientation}\nRule = {self.rule}\nTiles = {self.tiles}\n'
             if self.ratio != 0: string += f'Ratio = {self.ratio}\n'
@@ -156,8 +209,8 @@ class Kakuro:
                 if group is not None:
                     unassigned_groups.append(group)
         return unassigned_groups
-    def selectMostContrainedGroup(self, unassigned_groups) -> Group:
-        return min(unassigned_groups, key=attrgetter('ratio'))
+    def selectMostContrainedGroup(unassigned_groups) -> Group:
+        return min(unassigned_groups, key=operator.attrgetter('ratio'))
     def checkAssignmentCompleteness(assignments) -> bool:
         if len(assignments) == Kakuro.VARIABLE_COUNT:
             return True
@@ -172,16 +225,18 @@ class Kakuro:
                         if assignments[group_tile] == val:
                             return False
         return True
-    def solve(self, assignments = {}):
+    def solve(self, assignments = {}, use_LCV = False):
         # Check if assignment is complete
         if Kakuro.checkAssignmentCompleteness(assignments):
             return assignments
         
         # Choose variables (or a group in simple terms) according to group ratios
-        selected_group = self.selectMostContrainedGroup(self.calculateRatios(assignments))
-        # selected_group = self.groups[0][iter]
+        selected_group = Kakuro.selectMostContrainedGroup(self.calculateRatios(assignments))
+
         # Generate chosen group's partitions
         domain, to_be_assigned_tiles = selected_group.generateDomain(assignments)
+        if use_LCV:
+            domain = selected_group.createOrderedDomain(domain, to_be_assigned_tiles, assignments)
 
         # Iterate over each partition, adding it to assignments and generating the restricted partition list for the affected groups;
         # Then check whether a group's partition list becomes empty. If so, remove assignment.
@@ -200,7 +255,7 @@ class Kakuro:
             if not self.checkCurrentConsistency(assignments, new_assignment):
                 continue
             assignments.update(new_assignment)
-            result = self.solve(assignments)
+            result = self.solve(assignments, use_LCV)
             if result != -1:
                 return result
 
@@ -222,7 +277,7 @@ def main():
     Utils.printBoard(board_display_matrix)
     print("\n\nSolving...\n")
     start_time = time.time()
-    final_assignments = game_board.solve()
+    final_assignments = game_board.solve({}, use_LCV=eval(sys.argv[3]))
     end_time = time.time()
     
     if final_assignments == -1:
