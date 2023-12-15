@@ -6,7 +6,7 @@ import math
 import time
 import os
 from copy import deepcopy
-
+from numpy import random
 class Utils:
     # DEFAULT DISPLAY SETTINGS
     COLORS = {'RED':'\033[91m','EMERALD':'\033[92m','YELLOW':'\033[93m','BLUE1':'\033[94m','PINK':'\033[95m','BLUE2':'\033[96m','WHITE':'\033[97m'}
@@ -201,6 +201,18 @@ class Kakuro:
             groups = [h_groups]
             groups.append(v_groups)
         return Kakuro(groups), board_display_matrix
+    def getUnassignedGroups(self, assignments):
+        unassigned_groups = []
+        for group_type in self.groups:
+            for group in group_type:
+                assigned = True
+                for tile in group.tiles:
+                    if tile not in assignments:
+                        assigned = False
+                        break
+                if not assigned:
+                    unassigned_groups.append(group)
+        return unassigned_groups
     def calculateRatios(self, assignments):
         unassigned_groups = []
         for g_list in self.groups:
@@ -225,16 +237,20 @@ class Kakuro:
                         if assignments[group_tile] == val:
                             return False
         return True
-    def solve(self, assignments = {}, use_LCV = False):
+    def solve(self, assignments = {}, use_MCV = False, use_LCV = False):
         # Check if assignment is complete
         if Kakuro.checkAssignmentCompleteness(assignments):
             return assignments
         
-        # Choose variables (or a group in simple terms) according to group ratios
-        selected_group = Kakuro.selectMostContrainedGroup(self.calculateRatios(assignments))
+        # Choose variables based on strategy
+        if use_MCV:
+            selected_group = Kakuro.selectMostContrainedGroup(self.calculateRatios(assignments))
+        else:
+            selected_group = random.choice(self.getUnassignedGroups(assignments))
 
         # Generate chosen group's partitions
         domain, to_be_assigned_tiles = selected_group.generateDomain(assignments)
+        # Order variables based on strategy
         if use_LCV:
             domain = selected_group.createOrderedDomain(domain, to_be_assigned_tiles, assignments)
 
@@ -255,7 +271,7 @@ class Kakuro:
             if not self.checkCurrentConsistency(assignments, new_assignment):
                 continue
             assignments.update(new_assignment)
-            result = self.solve(assignments, use_LCV)
+            result = self.solve(assignments, use_MCV, use_LCV)
             if result != -1:
                 return result
 
@@ -265,7 +281,7 @@ class Kakuro:
 
 def main():
     try:
-        selected_puzzle = sample_kakuro_puzzles.puzzles[sys.argv[1], int(sys.argv[2])]
+        selected_puzzle = sample_kakuro_puzzles.puzzles[sys.argv[1]]
     except:
         print("Puzzle not found.")
         return
@@ -273,11 +289,20 @@ def main():
     game_board, board_display_matrix = Kakuro.createBoardFromString(selected_puzzle[0], selected_puzzle[1])
     Kakuro.STARTING_BOARD = board_display_matrix
 
+    use_MCV = False
+    use_LCV = False
+    if sys.argv[2] == 'mcv':
+        use_MCV = True
+        print("mcv yes")
+    if sys.argv[3] == 'lcv':
+        use_LCV = True
+        print("lcv yes")
+
     print("\nPuzzle to solve:")
     Utils.printBoard(board_display_matrix)
     print("\n\nSolving...\n")
     start_time = time.time()
-    final_assignments = game_board.solve({}, use_LCV=eval(sys.argv[3]))
+    final_assignments = game_board.solve({}, use_MCV, use_LCV)
     end_time = time.time()
     
     if final_assignments == -1:
